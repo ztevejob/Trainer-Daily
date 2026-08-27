@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Task Frequency Dashboard</title>
+    <title>Live Task Frequency Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
@@ -52,42 +52,27 @@
                 <i class="fa-solid fa-chart-pie text-lg"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm tracking-wide">Task Frequency Dashboard</h1>
-                <p class="text-[10px] text-slate-500 dark:text-slate-400">Analisis Frekuensi Berdasarkan Isi Task per Sheet</p>
+                <h1 class="font-bold text-sm tracking-wide">Live Task Dashboard</h1>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">Terhubung langsung ke Google Sheets CSV</p>
             </div>
         </div>
 
         <div class="flex items-center space-x-3 flex-wrap">
-            <!-- Filter Sheet -->
+            <!-- Filter Sheet / Bulan jika ada kolomnya -->
             <select id="sheetSelect" onchange="applyFilters()" class="px-3 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="all">Semua Sheet</option>
-                <option value="Mei">Sheet: Mei</option>
-                <option value="Juni">Sheet: Juni</option>
-                <option value="Juli">Sheet: Juli</option>
-                <option value="Agustus">Sheet: Agustus</option>
-                <option value="September">Sheet: September</option>
-            </select>
-
-            <!-- Filter Bulan -->
-            <select id="monthSelect" onchange="applyFilters()" class="px-3 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="all">Semua Bulan</option>
-                <option value="05">Mei (05)</option>
-                <option value="06">Juni (06)</option>
-                <option value="07">Juli (07)</option>
-                <option value="08">Agustus (08)</option>
-                <option value="09">September (09)</option>
+                <option value="all">Semua Data / Baris</option>
             </select>
 
             <!-- Search Input -->
             <div class="relative">
-                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Cari task / hari..." class="w-36 md:w-48 pl-9 pr-4 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Cari task / data..." class="w-36 md:w-48 pl-9 pr-4 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
             </div>
 
             <!-- Tombol Refresh -->
-            <button onclick="refreshData()" title="Muat Ulang Data" class="h-10 px-4 rounded-xl bg-indigo-600 text-white font-medium text-xs flex items-center space-x-2 hover:bg-indigo-700 transition shadow-sm shadow-indigo-600/30">
+            <button onclick="fetchCSVData()" title="Muat Ulang Data" class="h-10 px-4 rounded-xl bg-indigo-600 text-white font-medium text-xs flex items-center space-x-2 hover:bg-indigo-700 transition shadow-sm shadow-indigo-600/30">
                 <i id="refresh-icon" class="fa-solid fa-rotate"></i>
-                <span class="hidden sm:inline">Refresh</span>
+                <span class="hidden sm:inline">Sync Live</span>
             </button>
         </div>
     </header>
@@ -102,7 +87,7 @@
                     <i class="fa-solid fa-list-check"></i>
                 </div>
                 <div>
-                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Task Monthly</p>
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Task Tercatat</p>
                     <h3 id="stat-total-tasks" class="text-2xl font-bold mt-0.5">0</h3>
                 </div>
             </div>
@@ -140,18 +125,18 @@
 
         <!-- CHARTS SECTION -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Bar Chart: Total Task Monthly -->
+            <!-- Bar Chart -->
             <div class="lg:col-span-2 liquid-glass p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-sm">Total Task Monthly (Berdasarkan Isi Sheet)</h3>
-                    <span class="text-[10px] bg-indigo-500/10 text-indigo-500 px-2.5 py-1 rounded-md font-semibold">Frekuensi</span>
+                    <h3 class="font-bold text-sm">Frekuensi Task (Berdasarkan Isi CSV Live)</h3>
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-500 px-2.5 py-1 rounded-md font-semibold">Live Data</span>
                 </div>
                 <div class="relative h-56 w-full">
                     <canvas id="taskBarChart"></canvas>
                 </div>
             </div>
 
-            <!-- Donut Chart: Proporsi Jenis Tugas -->
+            <!-- Donut Chart -->
             <div class="liquid-glass p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-sm">Proporsi Jenis Tugas (%)</h3>
@@ -165,7 +150,7 @@
                     </div>
                 </div>
                 <div class="mt-2 text-center text-xs text-slate-400" id="active-filter-label">
-                    Filter: Semua Data
+                    Filter: Menampilkan Semua Baris
                 </div>
             </div>
         </div>
@@ -173,26 +158,17 @@
         <!-- TABEL DATA -->
         <div class="liquid-glass rounded-2xl border border-slate-200/60 dark:border-slate-800/60 overflow-hidden shadow-sm">
             <div class="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex justify-between items-center">
-                <h3 class="font-bold text-base">Tabel Detail Task Lintas Sheet</h3>
-                <span id="result-count" class="text-xs font-medium text-slate-500 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-lg">Memuat...</span>
+                <h3 class="font-bold text-base">Tabel Data CSV Google Sheets</h3>
+                <span id="result-count" class="text-xs font-medium text-slate-500 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-lg">Menghubungkan...</span>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs md:text-sm">
-                    <thead>
-                        <tr class="bg-slate-200/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
-                            <th class="p-3 font-bold whitespace-nowrap cursor-pointer hover:text-indigo-500" onclick="sortTable('sheetName')">Sheet <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
-                            <th class="p-3 font-bold whitespace-nowrap">Hari</th>
-                            <th class="p-3 font-bold whitespace-nowrap cursor-pointer hover:text-indigo-500" onclick="sortTable('tanggal')">Tanggal <i class="fa-solid fa-sort text-[10px] ml-1"></i></th>
-                            <script>
-                                for(let i=1; i<=13; i++) {
-                                    document.write(`<th class="p-3 font-bold whitespace-nowrap">Task ${i}</th>`);
-                                }
-                            </script>
-                        </tr>
+                    <thead id="table-head">
+                        <!-- Header dinamis dari CSV -->
                     </thead>
                     <tbody id="table-body" class="divide-y divide-slate-200/40 dark:divide-slate-800/40">
-                        <!-- Data injected via JS -->
+                        <!-- Data live dari CSV -->
                     </tbody>
                 </table>
             </div>
@@ -202,88 +178,105 @@
 
     <!-- SCRIPT LOGIC -->
     <script>
-        function generateMonthData(sheetName, year, month, daysCount) {
-            let data = [];
-            const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-            
-            for (let d = 1; d <= daysCount; d++) {
-                let dayStr = d < 10 ? '0' + d : '' + d;
-                let monthStr = month < 10 ? '0' + month : '' + month;
-                let dateObj = new Date(`${year}-${monthStr}-${dayStr}`);
-                let dayName = dayNames[dateObj.getDay()];
-
-                let tasks = [
-                    (d % 2 === 0) ? "Training Produk Apple" : "Review Modul",
-                    (d % 3 === 0) ? "Dcota Store Audit" : "Update Tracker",
-                    (d % 4 === 0) ? "Sales Coaching Staff" : "Sync Pak Hendra",
-                    (d % 5 === 0) ? "Training Ecosystem" : "Setup Form",
-                    "Draft Laporan",
-                    (d % 3 === 1) ? "Dcota Evaluasi" : "Checklist Aktivitas",
-                    (d % 2 === 1) ? "Sales Coaching Retail" : "Rekap Absensi",
-                    "Meeting Mingguan",
-                    `Closing ${d} ${sheetName}`
-                ];
-
-                while(tasks.length < 13) {
-                    tasks.push("Aktivitas Harian");
-                }
-
-                data.push({
-                    sheetName: sheetName,
-                    hari: dayName,
-                    tanggal: `${year}-${monthStr}-${dayStr}`,
-                    tasks: tasks
-                });
-            }
-            return data;
-        }
-
-        const multiSheetDatabase = {
-            "Mei": generateMonthData("Mei", 2026, 5, 31),
-            "Juni": generateMonthData("Juni", 2026, 6, 30),
-            "Juli": generateMonthData("Juli", 2026, 7, 31),
-            "Agustus": generateMonthData("Agustus", 2026, 8, 31),
-            "September": generateMonthData("September", 2026, 9, 30)
-        };
-
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTaGZU5CgReTvWWnoPxS4LgkGP_85mjLO6mgjYCymDSFlTynkNXTZR-WoAK827j7PD3o6EgWTeJYtB2/pub?output=csv";
+        
+        let globalCsvData = [];
+        let csvHeaders = [];
         let taskBarChart = null;
         let taskDonutChart = null;
-        let sortDirection = false;
 
-        function getAllData() {
-            let combined = [];
-            Object.keys(multiSheetDatabase).forEach(sheetKey => {
-                combined = combined.concat(multiSheetDatabase[sheetKey]);
+        // Parser sederhana untuk baris CSV yang mendukung tanda kutip
+        function parseCSVLine(text) {
+            let result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        async function fetchCSVData() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+            document.getElementById('result-count').innerText = "Mengambil data...";
+
+            try {
+                const response = await fetch(csvUrl);
+                const dataText = await response.text();
+                
+                const lines = dataText.split('\n').filter(line => line.trim() !== '');
+                if (lines.length === 0) throw new Error("File CSV kosong");
+
+                csvHeaders = parseCSVLine(lines[0]);
+                globalCsvData = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    let cols = parseCSVLine(lines[i]);
+                    if (cols.length > 0) {
+                        globalCsvData.push(cols);
+                    }
+                }
+
+                populateSheetFilter();
+                renderTable(globalCsvData);
+                updateStatsAndCharts(globalCsvData);
+
+            } catch (error) {
+                console.error("Gagal mengambil CSV:", error);
+                document.getElementById('result-count').innerText = "Gagal memuat data (Cek CORS / Link Publik)";
+            } finally {
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        function populateSheetFilter() {
+            const select = document.getElementById('sheetSelect');
+            select.innerHTML = '<option value="all">Semua Data / Baris</option>';
+            // Jika kolom pertama dianggap kategori/sheet, kita bisa buat opsi unik dari kolom 0
+            let uniqueCol0 = [...new Set(globalCsvData.map(row => row[0]))].filter(Boolean);
+            uniqueCol0.forEach(val => {
+                let opt = document.createElement('option');
+                opt.value = val;
+                opt.innerText = `Kategori: ${val}`;
+                select.appendChild(opt);
             });
-            return combined;
         }
 
-        function initDashboard() {
-            const data = getAllData();
-            renderTable(data);
-            updateStatsAndCharts(data);
-        }
-
-        function countTaskTypes(data) {
+        function countTaskTypes(dataRows) {
             let trainingCount = 0;
             let dcotaCount = 0;
             let salesCoachCount = 0;
             let otherCount = 0;
             let totalTasks = 0;
 
-            data.forEach(row => {
-                row.tasks.forEach(t => {
-                    if (t && t !== '-') {
-                        totalTasks++;
-                        let lower = t.toLowerCase();
-                        if (lower.includes('training')) {
+            dataRows.forEach(row => {
+                row.forEach(cell => {
+                    if (cell && cell !== '-' && cell !== '') {
+                        let lower = cell.toLowerCase();
+                        // Cek apakah cell tersebut merupakan teks task (bukan tanggal/angka murni)
+                        if (lower.includes('training') || lower.includes('pelatihan')) {
                             trainingCount++;
+                            totalTasks++;
                         } else if (lower.includes('dcota')) {
                             dcotaCount++;
-                        } else if (lower.includes('sales coach')) {
+                            totalTasks++;
+                        } else if (lower.includes('sales coach') || lower.includes('coaching')) {
                             salesCoachCount++;
-                        } else {
+                            totalTasks++;
+                        } else if (lower.length > 4 &&isNaN(cell)) {
+                            // Hitung teks lain yang bermakna task
                             otherCount++;
+                            totalTasks++;
                         }
                     }
                 });
@@ -292,50 +285,51 @@
             return { totalTasks, trainingCount, dcotaCount, salesCoachCount, otherCount };
         }
 
-        function renderTable(data) {
+        function renderTable(dataRows) {
+            const thead = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
+            
+            thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="16" class="p-6 text-center text-slate-400">Tidak ada data yang sesuai dengan filter.</td></tr>`;
+            // Render Header Table
+            let headTr = document.createElement('tr');
+            headTr.className = "bg-slate-200/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300";
+            csvHeaders.forEach(h => {
+                headTr.innerHTML += `<th class="p-3 font-bold whitespace-nowrap">${h}</th>`;
+            });
+            thead.appendChild(headTr);
+
+            if (dataRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${csvHeaders.length}" class="p-6 text-center text-slate-400">Tidak ada data ditemukan.</td></tr>`;
                 document.getElementById('result-count').innerText = `0 baris`;
                 return;
             }
 
-            document.getElementById('result-count').innerText = `Menampilkan ${data.length} baris`;
+            document.getElementById('result-count').innerText = `Menampilkan ${dataRows.length} baris`;
 
-            data.forEach(row => {
+            // Render Body Table
+            dataRows.forEach(row => {
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition";
-                
-                let html = `
-                    <td class="p-3 font-semibold text-indigo-500 whitespace-nowrap">${row.sheetName}</td>
-                    <td class="p-3 whitespace-nowrap">${row.hari}</td>
-                    <td class="p-3 text-slate-400 whitespace-nowrap">${row.tanggal}</td>
-                `;
-
-                for(let i=0; i<13; i++) {
-                    let taskVal = row.tasks[i] || '-';
-                    html += `<td class="p-3 text-slate-600 dark:text-slate-300 min-w-[120px]">${taskVal}</td>`;
+                let rowHtml = '';
+                for (let i = 0; i < csvHeaders.length; i++) {
+                    let val = row[i] || '-';
+                    rowHtml += `<td class="p-3 text-slate-600 dark:text-slate-300 whitespace-nowrap">${val}</td>`;
                 }
-
-                tr.innerHTML = html;
+                tr.innerHTML = rowHtml;
                 tbody.appendChild(tr);
             });
         }
 
-        function updateStatsAndCharts(data) {
-            const stats = countTaskTypes(data);
+        function updateStatsAndCharts(dataRows) {
+            const stats = countTaskTypes(dataRows);
 
             document.getElementById('stat-total-tasks').innerText = stats.totalTasks;
             document.getElementById('stat-training').innerText = stats.trainingCount;
             document.getElementById('stat-dcota').innerText = stats.dcotaCount;
             document.getElementById('stat-salescoach').innerText = stats.salesCoachCount;
             document.getElementById('donut-center-total').innerText = stats.totalTasks;
-
-            const sheetVal = document.getElementById('sheetSelect').value;
-            const monthVal = document.getElementById('monthSelect').value;
-            document.getElementById('active-filter-label').innerText = `Sheet: ${sheetVal} | Bulan: ${monthVal}`;
 
             const ctxBar = document.getElementById('taskBarChart').getContext('2d');
             const ctxDonut = document.getElementById('taskDonutChart').getContext('2d');
@@ -357,7 +351,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Frekuensi Isi Task',
+                        label: 'Frekuensi Live Task',
                         data: values,
                         backgroundColor: colors,
                         borderWidth: 2,
@@ -412,59 +406,21 @@
         }
 
         function applyFilters() {
-            const selectedSheet = document.getElementById('sheetSelect').value;
-            const selectedMonth = document.getElementById('monthSelect').value;
+            const selectedVal = document.getElementById('sheetSelect').value;
             const query = document.getElementById('searchInput').value.toLowerCase();
 
-            let sourceData = selectedSheet === 'all' ? getAllData() : (multiSheetDatabase[selectedSheet] || []);
-
-            const filtered = sourceData.filter(row => {
-                const rowMonth = row.tanggal.split('-')[1];
-                const matchMonth = (selectedMonth === 'all' || rowMonth === selectedMonth);
-
-                const matchQuery = row.sheetName.toLowerCase().includes(query) || 
-                                   row.hari.toLowerCase().includes(query) || 
-                                   row.tanggal.toLowerCase().includes(query) || 
-                                   row.tasks.some(t => t.toLowerCase().includes(query));
-
-                return matchMonth && matchQuery;
+            const filtered = globalCsvData.filter(row => {
+                const matchCategory = (selectedVal === 'all' || row[0] === selectedVal);
+                const matchQuery = row.some(cell => cell && cell.toLowerCase().includes(query));
+                return matchCategory && matchQuery;
             });
 
             renderTable(filtered);
             updateStatsAndCharts(filtered);
         }
 
-        function sortTable(column) {
-            sortDirection = !sortDirection;
-            const selectedSheet = document.getElementById('sheetSelect').value;
-            let sourceData = selectedSheet === 'all' ? getAllData() : (multiSheetDatabase[selectedSheet] || getAllData());
-
-            sourceData.sort((a, b) => {
-                let valA = a[column];
-                let valB = b[column];
-                if (valA < valB) return sortDirection ? 1 : -1;
-                if (valA > valB) return sortDirection ? -1 : 1;
-                return 0;
-            });
-
-            renderTable(sourceData);
-        }
-
-        function refreshData() {
-            const icon = document.getElementById('refresh-icon');
-            icon.classList.add('fa-spin');
-
-            setTimeout(() => {
-                icon.classList.remove('fa-spin');
-                document.getElementById('searchInput').value = '';
-                document.getElementById('sheetSelect').value = 'all';
-                document.getElementById('monthSelect').value = 'all';
-                initDashboard();
-            }, 800);
-        }
-
         window.onload = function() {
-            initDashboard();
+            fetchCSVData();
         };
     </script>
 </body>
