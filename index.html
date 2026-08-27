@@ -58,9 +58,26 @@
         </div>
 
         <div class="flex items-center space-x-3 flex-wrap">
-            <!-- Filter Sheet / Bulan jika ada kolomnya -->
+            <!-- Filter Kategori / Kolom Pertama -->
             <select id="sheetSelect" onchange="applyFilters()" class="px-3 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="all">Semua Data / Baris</option>
+                <option value="all">Semua Kategori</option>
+            </select>
+
+            <!-- Filter Bulan -->
+            <select id="monthSelect" onchange="applyFilters()" class="px-3 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="all">Semua Bulan</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
             </select>
 
             <!-- Search Input -->
@@ -150,7 +167,7 @@
                     </div>
                 </div>
                 <div class="mt-2 text-center text-xs text-slate-400" id="active-filter-label">
-                    Filter: Menampilkan Semua Baris
+                    Filter: Menampilkan Semua Data
                 </div>
             </div>
         </div>
@@ -164,12 +181,8 @@
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs md:text-sm">
-                    <thead id="table-head">
-                        <!-- Header dinamis dari CSV -->
-                    </thead>
-                    <tbody id="table-body" class="divide-y divide-slate-200/40 dark:divide-slate-800/40">
-                        <!-- Data live dari CSV -->
-                    </tbody>
+                    <thead id="table-head"></thead>
+                    <tbody id="table-body" class="divide-y divide-slate-200/40 dark:divide-slate-800/40"></tbody>
                 </table>
             </div>
         </div>
@@ -185,7 +198,6 @@
         let taskBarChart = null;
         let taskDonutChart = null;
 
-        // Parser sederhana untuk baris CSV yang mendukung tanda kutip
         function parseCSVLine(text) {
             let result = [];
             let current = '';
@@ -241,8 +253,7 @@
 
         function populateSheetFilter() {
             const select = document.getElementById('sheetSelect');
-            select.innerHTML = '<option value="all">Semua Data / Baris</option>';
-            // Jika kolom pertama dianggap kategori/sheet, kita bisa buat opsi unik dari kolom 0
+            select.innerHTML = '<option value="all">Semua Kategori</option>';
             let uniqueCol0 = [...new Set(globalCsvData.map(row => row[0]))].filter(Boolean);
             uniqueCol0.forEach(val => {
                 let opt = document.createElement('option');
@@ -263,7 +274,6 @@
                 row.forEach(cell => {
                     if (cell && cell !== '-' && cell !== '') {
                         let lower = cell.toLowerCase();
-                        // Cek apakah cell tersebut merupakan teks task (bukan tanggal/angka murni)
                         if (lower.includes('training') || lower.includes('pelatihan')) {
                             trainingCount++;
                             totalTasks++;
@@ -273,8 +283,7 @@
                         } else if (lower.includes('sales coach') || lower.includes('coaching')) {
                             salesCoachCount++;
                             totalTasks++;
-                        } else if (lower.length > 4 &&isNaN(cell)) {
-                            // Hitung teks lain yang bermakna task
+                        } else if (cell.length > 3 && isNaN(cell)) {
                             otherCount++;
                             totalTasks++;
                         }
@@ -292,7 +301,6 @@
             thead.innerHTML = '';
             tbody.innerHTML = '';
 
-            // Render Header Table
             let headTr = document.createElement('tr');
             headTr.className = "bg-slate-200/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300";
             csvHeaders.forEach(h => {
@@ -308,7 +316,6 @@
 
             document.getElementById('result-count').innerText = `Menampilkan ${dataRows.length} baris`;
 
-            // Render Body Table
             dataRows.forEach(row => {
                 let tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition";
@@ -330,6 +337,10 @@
             document.getElementById('stat-dcota').innerText = stats.dcotaCount;
             document.getElementById('stat-salescoach').innerText = stats.salesCoachCount;
             document.getElementById('donut-center-total').innerText = stats.totalTasks;
+
+            const selectedCat = document.getElementById('sheetSelect').value;
+            const selectedMonth = document.getElementById('monthSelect').value;
+            document.getElementById('active-filter-label').innerText = `Kategori: ${selectedCat} | Bulan: ${selectedMonth}`;
 
             const ctxBar = document.getElementById('taskBarChart').getContext('2d');
             const ctxDonut = document.getElementById('taskDonutChart').getContext('2d');
@@ -406,13 +417,31 @@
         }
 
         function applyFilters() {
-            const selectedVal = document.getElementById('sheetSelect').value;
+            const selectedCat = document.getElementById('sheetSelect').value;
+            const selectedMonth = document.getElementById('monthSelect').value;
             const query = document.getElementById('searchInput').value.toLowerCase();
 
             const filtered = globalCsvData.filter(row => {
-                const matchCategory = (selectedVal === 'all' || row[0] === selectedVal);
+                // Filter Kategori (kolom pertama)
+                const matchCategory = (selectedCat === 'all' || row[0] === selectedCat);
+
+                // Filter Bulan (mencari pola bulan seperti 'YYYY-MM', 'MM/', atau tanggal di dalam baris)
+                let matchMonth = true;
+                if (selectedMonth !== 'all') {
+                    matchMonth = row.some(cell => {
+                        if (!cell) return false;
+                        let lowerCell = cell.toLowerCase();
+                        // Cek apakah ada kecocokan string bulan (misal '-06-' untuk Juni atau format tanggal lainnya)
+                        return lowerCell.includes(`-${selectedMonth}-`) || 
+                               lowerCell.includes(`/${selectedMonth}/`) || 
+                               lowerCell.startsWith(`${selectedMonth}-`);
+                    });
+                }
+
+                // Filter Search Text Bebas
                 const matchQuery = row.some(cell => cell && cell.toLowerCase().includes(query));
-                return matchCategory && matchQuery;
+
+                return matchCategory && matchMonth && matchQuery;
             });
 
             renderTable(filtered);
