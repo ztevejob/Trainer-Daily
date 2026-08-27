@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainer Daily Activity Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse untuk membaca CSV dari URL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: {
+                            light: 'rgba(255, 255, 255, 0.7)',
+                            dark: 'rgba(15, 23, 42, 0.65)',
+                            borderLight: 'rgba(255, 255, 255, 0.4)',
+                            borderDark: 'rgba(255, 255, 255, 0.08)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .liquid-glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .dark .liquid-glass {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased transition-colors duration-300 min-h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR: Kalender Berjalan & Filter Bulan -->
+    <aside class="w-72 liquid-glass border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between z-20 hidden md:flex transition-all duration-300">
+        <div class="flex flex-col h-full overflow-hidden">
+            <!-- Logo / Brand -->
+            <div class="h-20 flex items-center px-6 border-b border-slate-200/60 dark:border-slate-800/60 flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-calendar-days text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-sm tracking-wide">Trainer Calendar</h1>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400">Live CSV Synced</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Navigation / Running Calendar -->
+            <nav class="p-4 space-y-3 overflow-y-auto flex-1">
+                <div class="px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Menu Utama</div>
+                <a href="#" onclick="filterMonth('All')" id="nav-All" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium text-sm transition shadow-sm shadow-indigo-600/20">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-house w-4"></i>
+                        <span>Semua Ringkasan</span>
+                    </div>
+                    <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full" id="count-All">0</span>
+                </a>
+                
+                <div class="pt-2 px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Kalender Bulanan</div>
+                
+                <!-- Bulan Mei -->
+                <a href="#" onclick="filterMonth('Mei')" id="nav-Mei" class="flex flex-col p-3 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-slate-200/40 dark:border-slate-800/40 text-slate-600 dark:text-slate-300 transition">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-star text-blue-500 w-4"></i>
+                            <span>Mei 2026</span>
+                        </span>
+                        <span class="text-[10px] bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded font-semibold" id="count-Mei">0 Hari</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Live Data Google Sheets</p>
+                </a>
+
+                <!-- Bulan Juni -->
+                <a href="#" onclick="filterMonth('Juni')" id="nav-Juni" class="flex flex-col p-3 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-slate-200/40 dark:border-slate-800/40 text-slate-600 dark:text-slate-300 transition">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-star text-purple-500 w-4"></i>
+                            <span>Juni 2026</span>
+                        </span>
+                        <span class="text-[10px] bg-purple-500/10 text-purple-500 px-2 py-0.5 rounded font-semibold" id="count-Juni">0 Hari</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Live Data Google Sheets</p>
+                </a>
+
+                <!-- Bulan Juli -->
+                <a href="#" onclick="filterMonth('Juli')" id="nav-Juli" class="flex flex-col p-3 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-slate-200/40 dark:border-slate-800/40 text-slate-600 dark:text-slate-300 transition">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-star text-emerald-500 w-4"></i>
+                            <span>Juli 2026</span>
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-semibold" id="count-Juli">0 Hari</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Live Data Google Sheets</p>
+                </a>
+
+                <!-- Bulan Agustus -->
+                <a href="#" onclick="filterMonth('Agustus')" id="nav-Agustus" class="flex flex-col p-3 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-slate-200/40 dark:border-slate-800/40 text-slate-600 dark:text-slate-300 transition">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-star text-amber-500 w-4"></i>
+                            <span>Agustus 2026</span>
+                        </span>
+                        <span class="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded font-semibold" id="count-Agustus">0 Hari</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Live Data Google Sheets</p>
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-slate-200/60 dark:border-slate-800/60 text-center flex-shrink-0">
+            <span class="text-[11px] text-slate-400">v3.0 CSV Fetch Enabled</span>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
+        
+        <!-- TOP HEADER -->
+        <header class="h-20 liquid-glass sticky top-0 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between px-6 md:px-10 z-10">
+            <div class="flex items-center space-x-3">
+                <h2 id="page-title" class="text-lg md:text-xl font-bold tracking-tight">Overview Aktivitas</h2>
+                <span id="active-badge" class="px-2.5 py-1 text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">Semua Bulan</span>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <input type="text" id="searchInput" onkeyup="filterActivities()" placeholder="Cari kegiatan..." class="w-44 md:w-64 pl-9 pr-4 py-2 text-xs md:text-sm bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+                </div>
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition">
+                    <i id="theme-icon" class="fa-solid fa-sun text-sm text-amber-400"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENT BODY -->
+        <main class="p-6 md:p-10 space-y-8 max-w-7xl mx-auto w-full">
+            
+            <!-- SUMMARY STATS CARDS -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                <div class="liquid-glass p-5 rounded-2xl flex items-center space-x-4 border border-slate-200/60 dark:border-slate-800/60">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Hari Aktif</p>
+                        <h3 id="stat-days" class="text-2xl font-bold mt-0.5">0</h3>
+                    </div>
+                </div>
+
+                <div class="liquid-glass p-5 rounded-2xl flex items-center space-x-4 border border-slate-200/60 dark:border-slate-800/60">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Kegiatan</p>
+                        <h3 id="stat-activities" class="text-2xl font-bold mt-0.5">0</h3>
+                    </div>
+                </div>
+
+                <div class="liquid-glass p-5 rounded-2xl flex items-center space-x-4 border border-slate-200/60 dark:border-slate-800/60">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Rata-rata/Hari</p>
+                        <h3 id="stat-avg" class="text-2xl font-bold mt-0.5">0.0</h3>
+                    </div>
+                </div>
+
+                <div class="liquid-glass p-5 rounded-2xl flex items-center space-x-4 border border-slate-200/60 dark:border-slate-800/60">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Status Koneksi</p>
+                        <h3 id="sync-status" class="text-sm font-bold mt-1 text-emerald-500">Memuat Data...</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DYNAMIC MONTHLY SUMMARY TEXT BOX -->
+            <div id="summary-banner" class="liquid-glass p-5 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 flex items-start space-x-4">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-indigo-600 dark:text-indigo-400" id="summary-title">Sinkronisasi Google Sheets</h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed" id="summary-desc">Mengambil data secara otomatis dari tautan CSV publik Google Sheets Anda.</p>
+                </div>
+            </div>
+
+            <!-- CHART SECTION -->
+            <div class="liquid-glass p-6 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-base">Grafik Statistik Aktivitas Bulanan</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Perbandingan jumlah item kegiatan per bulan dari Google Sheets</p>
+                    </div>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- DAILY ACTIVITY SECTION -->
+            <div class="liquid-glass rounded-2xl border border-slate-200/60 dark:border-slate-800/60 overflow-hidden shadow-sm">
+                <div class="p-6 border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h3 class="font-bold text-base">Detail Aktivitas Harian</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Daftar lengkap agenda berdasarkan sinkronisasi CSV</p>
+                    </div>
+                    <span id="result-count" class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-lg">Memuat data...</span>
+                </div>
+
+                <div id="activity-container" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Data Injected via JavaScript -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC (Live Fetch from Google Sheets CSV) -->
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTaGZU5CgReTvWWnoPxS4LgkGP_85mjLO6mgjYCymDSFlTynkNXTZR-WoAK827j7PD3o6EgWTeJYtB2/pub?output=csv";
+        
+        let activityData = [];
+        let currentFilter = 'All';
+        let activityChart = null;
+
+        function fetchGoogleSheetsData() {
+            Papa.parse(csvUrl, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processCSVData(results.data);
+                },
+                error: function(err) {
+                    console.error("Gagal mengambil CSV:", err);
+                    document.getElementById('sync-status').innerText = "Gagal Sinkron";
+                    document.getElementById('sync-status').className = "text-sm font-bold mt-1 text-red-500";
+                }
+            });
+        }
+
+        function processCSVData(rows) {
+            // Mengubah struktur baris CSV menjadi format objek aplikasi
+            // Asumsi kolom CSV: Hari, Tanggal, Task 1, Task 2, dst. Atau sesuai struktur spreadsheet Anda.
+            const parsed = [];
+            
+            rows.forEach(row => {
+                // Cari key kolom tanggal atau hari
+                const dateKey = Object.keys(row).find(k => k.toLowerCase().includes('tanggal') || k.toLowerCase().includes('date'));
+                const dateVal = dateKey ? row[dateKey] : '';
+                
+                if (!dateVal || dateVal.toLowerCase() === 'nan' || dateVal.trim() === '') return;
+
+                // Ekstrak bulan dari format tanggal (misal YYYY-MM-DD atau DD/MM/YYYY)
+                let monthName = "Mei"; // Default fallback
+                if (dateVal.includes('05') || dateVal.toLowerCase().includes('mei')) monthName = "Mei";
+                else if (dateVal.includes('06') || dateVal.toLowerCase().includes('juni')) monthName = "Juni";
+                else if (dateVal.includes('07') || dateVal.toLowerCase().includes('juli')) monthName = "Juli";
+                else if (dateVal.includes('08') || dateVal.toLowerCase().includes('agustus')) monthName = "Agustus";
+
+                // Kumpulkan semua kolom yang berisi Task
+                let tasks = [];
+                Object.keys(row).forEach(key => {
+                    if (key.toLowerCase().includes('task') || key.toLowerCase().includes('kegiatan')) {
+                        let val = row[key];
+                        if (val && val.trim() !== '' && val.toLowerCase() !== 'nan') {
+                            tasks.push(val.trim());
+                        }
+                    }
+                });
+
+                // Jika tidak menggunakan kolom header 'Task', ambil kolom selain Tanggal/Hari
+                if (tasks.length === 0) {
+                    Object.keys(row).forEach(key => {
+                        if (!key.toLowerCase().includes('tanggal') && !key.toLowerCase().includes('hari') && !key.toLowerCase().includes('date')) {
+                            let val = row[key];
+                            if (val && val.trim() !== '' && val.toLowerCase() !== 'nan') {
+                                tasks.push(val.trim());
+                            }
+                        }
+                    });
+                }
+
+                if (tasks.length > 0) {
+                    parsed.push({
+                        month: monthName,
+                        date: dateVal.trim(),
+                        activities: tasks
+                    });
+                }
+            });
+
+            activityData = parsed;
+            document.getElementById('sync-status').innerText = "Sinkron Sukses";
+            document.getElementById('sync-status').className = "text-sm font-bold mt-1 text-emerald-500";
+
+            updateSidebarCounts();
+            initChart();
+            renderDashboard(activityData);
+            updateSummary(activityData);
+        }
+
+        function updateSidebarCounts() {
+            const counts = { All: activityData.length, Mei: 0, Juni: 0, Juli: 0, Agustus: 0 };
+            activityData.forEach(item => {
+                if (counts[item.month] !== undefined) counts[item.month]++;
+            });
+
+            document.getElementById('count-All').innerText = counts.All;
+            ['Mei', 'Juni', 'Juli', 'Agustus'].forEach(m => {
+                document.getElementById(`count-${m}`).innerText = `${counts[m]} Hari`;
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            const counts = { Mei: 0, Juni: 0, Juli: 0, Agustus: 0 };
+            activityData.forEach(item => {
+                if (counts[item.month] !== undefined) counts[item.month] += item.activities.length;
+            });
+
+            if (activityChart) activityChart.destroy();
+
+            activityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mei 2026', 'Juni 2026', 'Juli 2026', 'Agustus 2026'],
+                    datasets: [{
+                        label: 'Total Kegiatan',
+                        data: [counts.Mei, counts.Juni, counts.Juli, counts.Agustus],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.6)',
+                            'rgba(168, 85, 247, 0.6)',
+                            'rgba(16, 185, 129, 0.6)',
+                            'rgba(245, 158, 11, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(168, 85, 247)',
+                            'rgb(16, 185, 129)',
+                            'rgb(245, 158, 11)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(156, 163, 175, 0.1)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDashboard(data) {
+            const container = document.getElementById('activity-container');
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2"></i>
+                        <p class="text-sm font-medium">Tidak ada data aktivitas yang ditemukan.</p>
+                    </div>
+                `;
+                document.getElementById('result-count').innerText = `0 data ditemukan`;
+                return;
+            }
+
+            document.getElementById('result-count').innerText = `Menampilkan ${data.length} hari`;
+
+            data.forEach(item => {
+                let badgeClass = 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20';
+                if(item.month === 'Mei') badgeClass = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+                if(item.month === 'Juni') badgeClass = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+                if(item.month === 'Juli') badgeClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+                if(item.month === 'Agustus') badgeClass = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+
+                let listHtml = item.activities.map(act => `
+                    <li class="flex items-start space-x-2 text-xs md:text-sm text-slate-600 dark:text-slate-300">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 flex-shrink-0"></span>
+                        <span class="leading-relaxed">${act}</span>
+                    </li>
+                `).join('');
+
+                const card = document.createElement('div');
+                card.className = "bg-white/40 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 flex flex-col justify-between hover:border-indigo-500/40 transition duration-200 shadow-sm";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeClass}">${item.month}</span>
+                            <span class="text-[11px] font-medium text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${item.date}</span>
+                        </div>
+                        <ul class="space-y-2 mt-2">
+                            ${listHtml}
+                        </ul>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateSummary(data) {
+            const totalDays = data.length;
+            let totalActs = 0;
+            data.forEach(d => totalActs += d.activities.length);
+            const avgActs = totalDays > 0 ? (totalActs / totalDays).toFixed(1) : '0.0';
+
+            document.getElementById('stat-days').innerText = totalDays;
+            document.getElementById('stat-activities').innerText = totalActs;
+            document.getElementById('stat-avg').innerText = avgActs;
+
+            const titleEl = document.getElementById('summary-title');
+            const descEl = document.getElementById('summary-desc');
+
+            if (currentFilter === 'All') {
+                titleEl.innerText = 'Ringkasan Aktivitas Keseluruhan (Live Google Sheets)';
+                descEl.innerText = `Terhubung langsung dengan spreadsheet publik, mencatat ${totalDays} hari aktif dengan total ${totalActs} item pekerjaan harian.`;
+            } else {
+                titleEl.innerText = `Analisis Bulan ${currentFilter} 2026`;
+                descEl.innerText = `Menampilkan data spesifik untuk bulan ${currentFilter} berdasarkan pembaruan data live dari Google Sheets.`;
+            }
+        }
+
+        function filterMonth(month) {
+            currentFilter = month;
+            ['All', 'Mei', 'Juni', 'Juli', 'Agustus'].forEach(m => {
+                const el = document.getElementById(`nav-${m}`);
+                if (el) {
+                    if (m === month) {
+                        el.className = m === 'All' 
+                            ? "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium text-sm transition shadow-sm shadow-indigo-600/20"
+                            : "flex flex-col p-3 rounded-xl bg-indigo-600 text-white font-medium text-sm transition shadow-sm shadow-indigo-600/20";
+                    } else {
+                        el.className = m === 'All'
+                            ? "flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300 font-medium text-sm transition"
+                            : "flex flex-col p-3 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 border border-slate-200/40 dark:border-slate-800/40 text-slate-600 dark:text-slate-300 transition";
+                    }
+                }
+            });
+
+            if (month === 'All') {
+                document.getElementById('page-title').innerText = 'Overview Aktivitas';
+                document.getElementById('active-badge').innerText = 'Semua Bulan';
+            } else {
+                document.getElementById('page-title').innerText = `Aktivitas Bulan ${month}`;
+                document.getElementById('active-badge').innerText = `${month} 2026`;
+            }
+
+            applyFilter();
+        }
+
+        function filterActivities() {
+            applyFilter();
+        }
+
+        function applyFilter() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = activityData.filter(item => {
+                const matchMonth = (currentFilter === 'All' || item.month === currentFilter);
+                const matchQuery = item.date.toLowerCase().includes(query) || item.activities.some(a => a.toLowerCase().includes(query));
+                return matchMonth && matchQuery;
+            });
+
+            renderDashboard(filtered);
+            updateSummary(filtered);
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = "fa-solid fa-moon text-sm text-slate-600";
+            } else {
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-sun text-sm text-amber-400";
+            }
+        }
+
+        window.onload = function() {
+            fetchGoogleSheetsData();
+        };
+    </script>
+</body>
+</html>
