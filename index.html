@@ -202,26 +202,16 @@
 
     <!-- SCRIPT LOGIC -->
     <script>
-        // Database isi sheet dengan teks spesifik (mengandung variasi Training, Dcota, Sales Coaching, dll.)
         function generateMonthData(sheetName, year, month, daysCount) {
             let data = [];
             const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
             
-            const poolTasks = [
-                "Training Produk Apple", "Review Modul", "Dcota Store Audit", 
-                "Update Tracker", "Sales Coaching Staff", "Sync Pak Hendra", 
-                "Training Ecosystem", "Setup Form", "Draft Laporan", 
-                "Dcota Evaluasi", "Sales Coaching Retail", "Meeting Mingguan", 
-                "Closing Aktivitas"
-            ];
-
             for (let d = 1; d <= daysCount; d++) {
                 let dayStr = d < 10 ? '0' + d : '' + d;
                 let monthStr = month < 10 ? '0' + month : '' + month;
                 let dateObj = new Date(`${year}-${monthStr}-${dayStr}`);
                 let dayName = dayNames[dateObj.getDay()];
 
-                // Mengisi tiap kolom task berdasarkan isi teks yang spesifik agar akurat discan oleh chart
                 let tasks = [
                     (d % 2 === 0) ? "Training Produk Apple" : "Review Modul",
                     (d % 3 === 0) ? "Dcota Store Audit" : "Update Tracker",
@@ -274,7 +264,6 @@
             updateStatsAndCharts(data);
         }
 
-        // Fungsi scanner untuk membaca teks isi task secara dinamis
         function countTaskTypes(data) {
             let trainingCount = 0;
             let dcotaCount = 0;
@@ -338,7 +327,6 @@
         function updateStatsAndCharts(data) {
             const stats = countTaskTypes(data);
 
-            // Update Statistik Angka di Kartu Atas
             document.getElementById('stat-total-tasks').innerText = stats.totalTasks;
             document.getElementById('stat-training').innerText = stats.trainingCount;
             document.getElementById('stat-dcota').innerText = stats.dcotaCount;
@@ -349,23 +337,21 @@
             const monthVal = document.getElementById('monthSelect').value;
             document.getElementById('active-filter-label').innerText = `Sheet: ${sheetVal} | Bulan: ${monthVal}`;
 
-            // Render Chart Berdasarkan Isi Teks Task
             const ctxBar = document.getElementById('taskBarChart').getContext('2d');
             const ctxDonut = document.getElementById('taskDonutChart').getContext('2d');
 
             const labels = ['Training', 'Dcota', 'Sales Coach', 'Lainnya'];
             const values = [stats.trainingCount, stats.dcotaCount, stats.salesCoachCount, stats.otherCount];
             const colors = [
-                'rgba(59, 130, 246, 0.75)',  // Blue
-                'rgba(245, 158, 11, 0.75)',  // Amber
-                'rgba(16, 185, 129, 0.75)',  // Emerald
-                'rgba(156, 163, 175, 0.75)'  // Slate
+                'rgba(59, 130, 246, 0.75)',  
+                'rgba(245, 158, 11, 0.75)',  
+                'rgba(16, 185, 129, 0.75)',  
+                'rgba(156, 163, 175, 0.75)'  
             ];
 
             if (taskBarChart) taskBarChart.destroy();
             if (taskDonutChart) taskDonutChart.destroy();
 
-            // 1. Bar Chart: Total Task Monthly
             taskBarChart = new Chart(ctxBar, {
                 type: 'bar',
                 data: {
@@ -396,7 +382,6 @@
                 }
             });
 
-            // 2. Donut Chart: Proporsi Jenis Tugas
             taskDonutChart = new Chart(ctxDonut, {
                 type: 'doughnut',
                 data: {
@@ -452,7 +437,7 @@
         function sortTable(column) {
             sortDirection = !sortDirection;
             const selectedSheet = document.getElementById('sheetSelect').value;
-            let sourceData = selectedSheet === 'all' ? getAllData() : (multiSheetDatabase[selectedSheet] &amp;&amp; multiSheetDatabase[selectedSheet] !== undefined ? multiSheetDatabase[selectedSheet] : getAllData());
+            let sourceData = selectedSheet === 'all' ? getAllData() : (multiSheetDatabase[selectedSheet] || getAllData());
 
             sourceData.sort((a, b) => {
                 let valA = a[column];
